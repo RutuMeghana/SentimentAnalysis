@@ -22,3 +22,56 @@ from sklearn.tree import DecisionTreeClassifier
 from xgboost import XGBClassifier
 import pickle
 import re
+import string
+
+
+from google.colab import drive
+drive.mount('/content/drive')
+
+data = pd.read_csv('/content/drive/MyDrive/AI4ALL-NPLGroup3/amazon_alexa.tsv', delimiter='\t', quoting=3)
+
+print(f"Dataset shape : {data.shape}")
+
+print(f"Feature names : {data.columns.values}")
+
+data.isnull().sum()
+
+data[data['verified_reviews'].isna() == True]
+
+#Drop the null record
+data.dropna(inplace=True)
+print(f"Dataset shape after dropping null values : {data.shape}")
+
+def preprocess_text(text):
+
+    text = text.lower()
+
+    text = text.translate(str.maketrans("", "", string.punctuation))
+
+    text = re.sub(r'\W+', ' ', text)
+
+    tokens = text.split()
+    stop_words = set(stopwords.words('english'))
+    tokens = [word for word in tokens if word not in stop_words]
+
+    stemmer = PorterStemmer()
+    tokens = [stemmer.stem(word) for word in tokens]
+    return ' '.join(tokens)
+
+data['cleaned_reviews'] = data['verified_reviews'].apply(preprocess_text)
+
+print(data[['verified_reviews', 'cleaned_reviews', 'feedback']].head())
+
+X = data['cleaned_reviews']
+y = data['feedback']
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=1/3, random_state=0, stratify=y)
+
+print(f"Training set size: {X_train.shape[0]}")
+print(f"Testing set size: {X_test.shape[0]}")
+
+vectorizer = CountVectorizer()
+
+X_train_counts = vectorizer.fit_transform(X_train)
+
+X_test_counts = vectorizer.transform(X_test)
